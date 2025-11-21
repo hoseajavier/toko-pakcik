@@ -1,6 +1,8 @@
 import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, CheckCircle, XCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle, XCircle, ShoppingCart, ShieldCheck, Truck, Phone } from "lucide-react";
+
+// --- MOCK DATA (Ganti dengan import lokal Anda) ---
 import dataDetailProduct from "../data/dataDetailProduct";
 
 const ProductDetail = () => {
@@ -8,10 +10,20 @@ const ProductDetail = () => {
   const product = dataDetailProduct.find((p) => p.id === parseInt(id));
   const [currentImage, setCurrentImage] = useState(0);
 
+  // ===== Variant Handling =====
+  const [selectedVariant, setSelectedVariant] = useState(
+    product?.variants?.length === 1 ? product.variants[0] : null
+  );
+  const [quantity, setQuantity] = useState(1);
+  
+  // ===== Notification (Toast) =====
+  const [toast, setToast] = useState({ show: false, type: "", message: "" });
+
   if (!product) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-gray-700">
-        <p>Product not found</p>
+      <div className="min-h-screen flex items-center justify-center text-slate-700 bg-gray-50">
+        <p className="text-lg font-medium">Product not found</p>
+        <Link to="/shop" className="ml-4 text-yellow-600 hover:underline">Back to Shop</Link>
       </div>
     );
   }
@@ -26,57 +38,38 @@ const ProductDetail = () => {
     setCurrentImage((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
-  // ===== Variant Handling =====
-  const [selectedVariant, setSelectedVariant] = useState(
-    product.variants.length === 1 ? product.variants[0] : null
-  );
-  const [quantity, setQuantity] = useState(1);
-
   const variantLabel = product.variants[0]?.size
-    ? "size"
+    ? "Size"
     : product.variants[0]?.color
-    ? "color"
-    : "variant";
+    ? "Color"
+    : "Variant";
 
-  const handleVariantChange = (e) => {
+  const handleVariantChange = (val) => {
     const chosen = product.variants.find(
-      (v) => v.size === e.target.value || v.color === e.target.value
+      (v) => v.size === val || v.color === val
     );
     setSelectedVariant(chosen);
     setQuantity(1);
   };
 
-  const handleQuantityChange = (e) => {
-    const value = parseInt(e.target.value, 10);
-    if (selectedVariant) {
-      if (value > selectedVariant.stock) {
-        setQuantity(selectedVariant.stock);
-      } else if (value < 1) {
-        setQuantity(1);
-      } else {
-        setQuantity(value);
-      }
-    } else {
-      setQuantity(value < 1 ? 1 : value);
-    }
+  const handleQuantityChange = (type) => {
+     if (!selectedVariant) return;
+     
+     if (type === 'increase') {
+        if (quantity < selectedVariant.stock) setQuantity(quantity + 1);
+     } else {
+        if (quantity > 1) setQuantity(quantity - 1);
+     }
   };
-
-  // ===== Notification (Toast) =====
-  const [toast, setToast] = useState({ show: false, type: "", message: "" });
 
   const showToast = (type, message) => {
     setToast({ show: true, type, message });
-
-    if (showToast.timeoutId) {
-      clearTimeout(showToast.timeoutId);
-    }
-
-    showToast.timeoutId = setTimeout(() => {
+    setTimeout(() => {
       setToast({ show: false, type: "", message: "" });
     }, 3000);
   };
 
-  // ====== ADD TO CART (versi fix sinkron Cart.jsx) ======
+  // ====== ADD TO CART ======
   const handleAddToCart = () => {
     if (!selectedVariant) {
       showToast("error", "Please select a variant first.");
@@ -84,8 +77,7 @@ const ProductDetail = () => {
     }
 
     const cart = JSON.parse(localStorage.getItem("cart")) || [];
-    const variantKey =
-      selectedVariant.size || selectedVariant.color || "default";
+    const variantKey = selectedVariant.size || selectedVariant.color || "default";
 
     const existingIndex = cart.findIndex(
       (item) => item.id === product.id && item.variantKey === variantKey
@@ -113,172 +105,217 @@ const ProductDetail = () => {
 
     localStorage.setItem("cart", JSON.stringify(cart));
     showToast("success", "Product added to cart successfully!");
+    // Optional: Trigger storage event for Navbar cart count update if needed
+    window.dispatchEvent(new Event("storage"));
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen pt-32 pb-20 px-6 md:px-12 lg:px-20 relative">
+    <div className="bg-white min-h-screen font-sans text-slate-900 pt-28 pb-20">
+      
       {/* Toast Notification */}
-      {toast.show && (
-        <div
-          className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg text-white transition 
-            ${toast.type === "success" ? "bg-green-600" : "bg-red-600"}`}
-        >
-          {toast.type === "success" ? (
-            <CheckCircle size={20} />
-          ) : (
-            <XCircle size={20} />
-          )}
-          <span className="text-sm font-medium">{toast.message}</span>
+      <div className={`fixed top-24 right-5 z-50 transition-all duration-500 transform ${toast.show ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"}`}>
+        <div className={`flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl border ${toast.type === "success" ? "bg-white border-green-100 text-green-700" : "bg-white border-red-100 text-red-600"}`}>
+          {toast.type === "success" ? <CheckCircle size={20} className="text-green-500" /> : <XCircle size={20} className="text-red-500" />}
+          <span className="font-medium">{toast.message}</span>
         </div>
-      )}
+      </div>
 
-      {/* Back */}
-      <Link to="/shop" className="text-yellow-600 hover:underline">
-        ← Back to Shop
-      </Link>
+      <div className="max-w-7xl mx-auto px-6 lg:px-12">
+        
+        {/* Breadcrumbs */}
+        <nav className="flex mb-8 text-sm font-medium text-slate-500">
+           <Link to="/" className="hover:text-slate-900 transition-colors">Home</Link>
+           <span className="mx-2">/</span>
+           <Link to="/shop" className="hover:text-slate-900 transition-colors">Shop</Link>
+           <span className="mx-2">/</span>
+           <span className="text-slate-900">{product.name}</span>
+        </nav>
 
-      {/* Content */}
-      <div className="grid md:grid-cols-2 gap-10 mt-8">
-        {/* Images */}
-        <div className="flex flex-col items-center">
-          <div className="relative w-full flex items-center justify-center bg-white rounded-xl shadow-md p-4">
-            <img
-              src={images[currentImage]}
-              alt={`${product.name}-${currentImage}`}
-              className="w-full h-auto max-h-[400px] object-contain rounded-lg"
-            />
-            {images.length > 1 && (
-              <>
-                <button
-                  onClick={prevImage}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/40 text-white p-2 rounded-full hover:bg-black/60"
-                >
-                  <ChevronLeft size={24} />
-                </button>
-                <button
-                  onClick={nextImage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/40 text-white p-2 rounded-full hover:bg-black/60"
-                >
-                  <ChevronRight size={24} />
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* Thumbnails */}
-          {images.length > 1 && (
-            <div className="flex gap-3 mt-4 flex-wrap justify-center">
-              {images.map((img, i) => (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
+          
+          {/* LEFT COLUMN: PRODUCT IMAGES */}
+          <div className="space-y-6">
+             {/* Main Image */}
+             <div className="relative bg-slate-50 rounded-3xl overflow-hidden aspect-square group">
                 <img
-                  key={i}
-                  src={img}
-                  alt={`${product.name}-thumb-${i}`}
-                  className={`w-20 h-20 object-contain rounded-lg border-2 cursor-pointer transition ${
-                    currentImage === i
-                      ? "border-yellow-500"
-                      : "border-transparent hover:border-gray-300"
-                  }`}
-                  onClick={() => setCurrentImage(i)}
+                  src={images[currentImage]}
+                  alt={product.name}
+                  className="w-full h-full object-contain object-center p-8 transition-transform duration-500 group-hover:scale-105"
                 />
-              ))}
-            </div>
-          )}
-        </div>
+                
+                {images.length > 1 && (
+                  <>
+                    <button onClick={prevImage} className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 backdrop-blur hover:bg-white text-slate-900 shadow-lg transition-all opacity-0 group-hover:opacity-100 translate-x-[-10px] group-hover:translate-x-0">
+                       <ChevronLeft size={24} />
+                    </button>
+                    <button onClick={nextImage} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-white/80 backdrop-blur hover:bg-white text-slate-900 shadow-lg transition-all opacity-0 group-hover:opacity-100 translate-x-[10px] group-hover:translate-x-0">
+                       <ChevronRight size={24} />
+                    </button>
+                  </>
+                )}
+             </div>
 
-        {/* Info */}
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            {product.name}
-          </h2>
-          <p className="text-gray-600 mb-6">{product.type}</p>
-
-          {/* Harga & Stok */}
-          {selectedVariant && (
-            <div className="mb-6">
-              <p className="text-lg font-bold text-yellow-600">
-                {selectedVariant.price}
-              </p>
-              <p className="text-sm text-gray-500">
-                Stock: {selectedVariant.stock}
-              </p>
-            </div>
-          )}
-
-          {/* Dropdown untuk size / color */}
-          {product.variants.length > 1 && (
-            <div className="mb-6">
-              <label className="block text-gray-700 mb-2">
-                Choose {product.variants[0].size ? "Size" : "Color"}
-              </label>
-              <select
-                onChange={handleVariantChange}
-                value={
-                  selectedVariant
-                    ? selectedVariant.size || selectedVariant.color
-                    : ""
-                }
-                className="border border-gray-300 rounded-lg px-4 py-2 w-full text-sm shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
-              >
-                <option value="">-- Select --</option>
-                {product.variants.map((v, i) => (
-                  <option key={i} value={v.size || v.color}>
-                    {v.size || v.color}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Input Quantity */}
-          {selectedVariant && (
-            <div className="mb-6">
-              <label className="block text-gray-700 mb-2">Quantity</label>
-              <input
-                type="number"
-                min="1"
-                value={quantity}
-                onChange={handleQuantityChange}
-                className="border border-gray-300 rounded-lg px-4 py-2 w-24 text-center shadow-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
-              />
-            </div>
-          )}
-
-          {/* Buttons */}
-          <div className="flex gap-4 mt-6">
-            <button
-              disabled={!selectedVariant}
-              onClick={handleAddToCart}
-              className={`px-6 py-3 rounded-lg font-semibold text-white transition ${
-                selectedVariant
-                  ? "bg-yellow-600 hover:bg-yellow-700"
-                  : "bg-gray-400 cursor-not-allowed"
-              }`}
-            >
-              Add to Cart
-            </button>
+             {/* Thumbnails */}
+             {images.length > 1 && (
+               <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                 {images.map((img, i) => (
+                   <button
+                     key={i}
+                     onClick={() => setCurrentImage(i)}
+                     className={`flex-shrink-0 w-24 h-24 rounded-xl border-2 overflow-hidden transition-all ${
+                       currentImage === i ? "border-slate-900 opacity-100" : "border-transparent opacity-60 hover:opacity-100"
+                     }`}
+                   >
+                     <img src={img} alt={`thumb-${i}`} className="w-full h-full object-cover" />
+                   </button>
+                 ))}
+               </div>
+             )}
           </div>
-          {/* Contact Admin Section */}
-          <div className="mt-10">
-            <h3 className="text-gray-700 font-medium mb-3">
-              If you have any questions, feel free to chat with our Admin via
-              WhatsApp:
-            </h3>
-            <a
-              href={`https://wa.me/6287722070767?text=${encodeURIComponent(
-                `Halo, saya ingin menanyakan mengenai *${product.name}*${
-                  selectedVariant && product.variants.length > 1
-                    ? ` dengan ${variantLabel} *${
-                        selectedVariant.size || selectedVariant.color
-                      }*`
-                    : ""
-                }`
-              )}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block px-6 py-3 rounded-lg font-semibold text-white bg-green-600 hover:bg-green-700 transition"
-            >
-              Chat via WhatsApp
-            </a>
+
+          {/* RIGHT COLUMN: PRODUCT INFO */}
+          <div className="lg:sticky lg:top-32 h-fit space-y-8">
+             
+             {/* Header */}
+             <div>
+                <span className="text-yellow-600 font-bold tracking-wider text-sm uppercase mb-2 block">{product.type}</span>
+                <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">{product.name}</h1>
+                
+                {/* Price Display */}
+                <div className="flex items-baseline gap-4">
+                   {selectedVariant ? (
+                      <span className="text-3xl font-bold text-slate-900">{selectedVariant.price}</span>
+                   ) : (
+                      <span className="text-3xl font-bold text-slate-900">
+                        {/* Logic to show range if multiple variants exist, simplified here */}
+                        From {product.variants[0].price}
+                      </span>
+                   )}
+                   {selectedVariant && (
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedVariant.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                         {selectedVariant.stock > 0 ? `In Stock (${selectedVariant.stock})` : 'Out of Stock'}
+                      </span>
+                   )}
+                </div>
+             </div>
+             
+             <hr className="border-slate-100" />
+
+             {/* Controls */}
+             <div className="space-y-6">
+                
+                {/* Variant Selector */}
+                {product.variants.length > 1 && (
+                   <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-3">Select {variantLabel}</label>
+                      <div className="flex flex-wrap gap-3">
+                         {product.variants.map((v, i) => {
+                            const val = v.size || v.color;
+                            const isSelected = selectedVariant && (selectedVariant.size === val || selectedVariant.color === val);
+                            return (
+                               <button
+                                  key={i}
+                                  onClick={() => handleVariantChange(val)}
+                                  className={`px-6 py-3 rounded-lg border text-sm font-medium transition-all ${
+                                    isSelected 
+                                      ? "border-slate-900 bg-slate-900 text-white shadow-md" 
+                                      : "border-slate-200 text-slate-600 hover:border-slate-400"
+                                  }`}
+                               >
+                                  {val}
+                               </button>
+                            );
+                         })}
+                      </div>
+                   </div>
+                )}
+
+                {/* Quantity Selector */}
+                <div>
+                   <label className="block text-sm font-bold text-slate-700 mb-3">Quantity</label>
+                   <div className="flex items-center gap-4">
+                      <div className="flex items-center border border-slate-300 rounded-lg">
+                         <button 
+                            onClick={() => handleQuantityChange('decrease')}
+                            disabled={!selectedVariant || quantity <= 1}
+                            className="px-4 py-3 hover:bg-slate-50 rounded-l-lg disabled:opacity-50 transition"
+                         >
+                            -
+                         </button>
+                         <span className="w-12 text-center font-medium">{quantity}</span>
+                         <button 
+                            onClick={() => handleQuantityChange('increase')}
+                            disabled={!selectedVariant || quantity >= selectedVariant.stock}
+                            className="px-4 py-3 hover:bg-slate-50 rounded-r-lg disabled:opacity-50 transition"
+                         >
+                            +
+                         </button>
+                      </div>
+                   </div>
+                </div>
+
+                {/* Action Button */}
+                <button
+                   onClick={handleAddToCart}
+                   disabled={!selectedVariant || selectedVariant.stock === 0}
+                   className={`w-full py-4 px-8 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all flex items-center justify-center gap-3 ${
+                      !selectedVariant || selectedVariant.stock === 0 
+                        ? "hover:bg-gray-800 transition shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        : "bg-black text-white"
+                   }`}
+                >
+                   <ShoppingCart />
+                   Add to Cart
+                </button>
+             </div>
+
+             {/* Value Props */}
+             <div className="grid grid-cols-2 gap-4 pt-6">
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-50">
+                   <Truck className="text-slate-400 shrink-0" />
+                   <div>
+                      <h4 className="font-bold text-sm">Fast Delivery</h4>
+                      <p className="text-xs text-slate-500 mt-1">Shipping via JNE & EMS</p>
+                   </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-slate-50">
+                   <ShieldCheck className="text-slate-400 shrink-0" />
+                   <div>
+                      <h4 className="font-bold text-sm">Official Gear</h4>
+                      <p className="text-xs text-slate-500 mt-1">100% Authentic Product</p>
+                   </div>
+                </div>
+             </div>
+
+             {/* Contact Support */}
+             <div className="bg-green-50 border border-green-100 rounded-xl p-6">
+                <div className="flex items-start gap-4">
+                   <div className="bg-green-100 p-3 rounded-full text-green-600">
+                      <Phone size={24} />
+                   </div>
+                   <div>
+                      <h3 className="font-bold text-slate-900">Need Help?</h3>
+                      <p className="text-sm text-slate-600 mt-1 mb-4">
+                         Have questions about sizing or material? Chat with our expert team.
+                      </p>
+                      <a
+                        href={`https://wa.me/6287722070767?text=${encodeURIComponent(
+                          `Halo, saya ingin menanyakan mengenai *${product.name}*${
+                            selectedVariant 
+                              ? ` dengan ${variantLabel} *${selectedVariant.size || selectedVariant.color}*`
+                              : ""
+                          }`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center text-sm font-bold text-green-700 hover:text-green-800 hover:underline"
+                      >
+                        Chat via WhatsApp →
+                      </a>
+                   </div>
+                </div>
+             </div>
+
           </div>
         </div>
       </div>
