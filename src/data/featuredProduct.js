@@ -6,6 +6,7 @@ import chino4 from "../assets/product/chino_back.jpg";
 const featuredProduct = {
   id: 1,
   name: "Chino Pants",
+  price: "Rp99.900",
   description:
     "Comfortable premium chino pants made from durable and breathable materials, suitable for daily wear.",
   images: [chino1, chino2, chino3, chino4],
