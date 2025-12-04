@@ -12,7 +12,7 @@ const featuredProduct = {
   price: "Rp99.900",
   description:
     "Comfortable premium chino pants made from durable and breathable materials, suitable for daily wear.",
-  images: [chino1, chino2,chino5, chino3, chino6, chino4, chino7],
+  images: [chino1, chino2,chino5, chino3, chino7, chino4, chino6],
   stock: {
     M: 7,
     L: 17,
