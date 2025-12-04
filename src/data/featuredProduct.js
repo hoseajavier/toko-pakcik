@@ -3,7 +3,7 @@ import chino2 from "../assets/product/chino_front1.jpg";
 import chino3 from "../assets/product/chino_diag.jpg";
 import chino4 from "../assets/product/chino_back.jpg";
 import chino5 from "../assets/product/detail-chino-front.jpg";
-import chino6 from "../assets/product/detail-chino-chino_back.jpg";
+import chino6 from "../assets/product/detail-chino-back.jpg";
 import chino7 from "../assets/product/detail-chino-diag.jpg";
 
 const featuredProduct = {
